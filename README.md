@@ -88,8 +88,7 @@ Check the API is up: http://localhost:5000/api/health
 cd server && node seed.js
 ```
 
-Creates 3 demo accounts and a "Boracay Trip" group with 4 expenses. Log in with
-`demo.vince@ambagan.test` / `demo1234`. Expected balances: Vince owes ₱740.00, Paolo gets back ₱820.00, Bea owes ₱80.00.
+Creates 5 demo accounts and 4 groups (18 expenses). Log in with demo.vince@ambagan.test / demo1234. Boracay Trip should show: Vince owes ₱740.00, Paolo gets back ₱820.00, Bea owes ₱80.00.
 
 ### 5. Test the balance math
 
