@@ -160,6 +160,6 @@ screenshots/              images used in this README
 | --- | --- |
 | Vince (`BinsU01`) | Project setup, auth, schemas, Groups feature, polish (responsive layout, loading and error states), demo data, README |
 | Michael (`chael-r`) | Expenses feature (endpoints, Add Expense form, expense list, delete) and the Balances panel |
-| Rodner (`rodnersantos-design`) | Balances feature |
+| Rodner (`rodnersantos-design`) | Balances feature (built on Michael's laptop, so committed under Michael's account), testing |
 
 Workflow: we split the work by feature, committed in small steps with clear messages (`feat: ...`, `fix: ...`, `polish: ...`), pulled before starting, and never committed `.env`.
