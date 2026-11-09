@@ -1,21 +1,65 @@
-// OWNER: Member 3
-// The math is already done and tested in utils/balances.js.
-// Your job: load the expenses, call the helpers, and send names along with the numbers.
-
 const asyncHandler = require('../utils/asyncHandler');
-// const Expense = require('../models/Expense');
-// const { computeBalances, settleUp } = require('../utils/balances');
+const Expense = require('../models/Expense');
+const { computeBalances, settleUp } = require('../utils/balances');
 
-// GET /api/groups/:id/balances
-// Response idea: { balances: [{ user: {_id, name}, net }], transfers: [{ from, to, amount }] }
 const getBalances = asyncHandler(async (req, res) => {
-  // TODO:
-  // 1. const expenses = await Expense.find({ groupId: req.group._id });
-  // 2. const memberIds = req.group.members.map(String);
-  // 3. const balances = computeBalances(expenses, memberIds);
-  // 4. const transfers = settleUp(balances);
-  // 5. populate member names (await req.group.populate('members', 'name')) and respond
-  res.status(501).json({ message: 'TODO (Member 3): getBalances' });
+  // Get all expenses belonging to this group
+  const expenses = await Expense.find({
+    groupId: req.group._id,
+  });
+
+  // Get member IDs
+  const memberIds = req.group.members.map((member) =>
+    String(member._id || member)
+  );
+
+  // Compute each member's net balance
+  const calculatedBalances = computeBalances(expenses, memberIds);
+
+  // Compute who pays whom
+  const calculatedTransfers = settleUp(calculatedBalances);
+
+  // Populate member names
+  await req.group.populate('members', 'name email');
+
+  // Create a lookup for member details
+  const memberMap = new Map(
+    req.group.members.map((member) => [
+      String(member._id),
+      {
+        _id: member._id,
+        name: member.name,
+        email: member.email,
+      },
+    ])
+  );
+
+  // Attach member information to balances
+  const balances = calculatedBalances.map((balance) => ({
+    user: memberMap.get(balance.userId) || {
+      _id: balance.userId,
+      name: 'Unknown Member',
+    },
+    net: balance.net,
+  }));
+
+  // Attach member information to transfers
+  const transfers = calculatedTransfers.map((transfer) => ({
+    from: memberMap.get(transfer.from) || {
+      _id: transfer.from,
+      name: 'Unknown Member',
+    },
+    to: memberMap.get(transfer.to) || {
+      _id: transfer.to,
+      name: 'Unknown Member',
+    },
+    amount: transfer.amount,
+  }));
+
+  res.status(200).json({
+    balances,
+    transfers,
+  });
 });
 
 module.exports = { getBalances };
