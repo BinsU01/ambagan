@@ -5,10 +5,12 @@ import Navbar from '../components/Navbar.jsx';
 import Spinner from '../components/Spinner.jsx';
 import api, { getErrorMessage } from '../api/client.js';
 import { toCentavos } from '../utils/money.js';
+import { useAuth } from '../context/AuthContext.jsx';
 
 export default function AddExpense() {
   const { groupId } = useParams();
   const navigate = useNavigate();
+  const { user } = useAuth();
 
   const [group, setGroup] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -40,7 +42,9 @@ export default function AddExpense() {
         const members = groupData.members || [];
 
         if (members.length > 0) {
-          setPaidBy(String(members[0]._id));
+          // Default the payer to whoever is logged in (most expenses are paid by "me")
+          const me = members.find((m) => String(m._id) === String(user?.id || user?._id));
+          setPaidBy(String((me || members[0])._id));
           setSplitAmong(members.map((member) => String(member._id)));
         }
       } catch (err) {
@@ -142,7 +146,7 @@ export default function AddExpense() {
       <Navbar />
 
       <main className="container">
-        <div className="form" style={{ maxWidth: '620px', margin: '40px auto' }}>
+        <div className="form add-expense-form">
           <Link
             to={`/groups/${groupId}`}
             className="eyebrow"
@@ -229,13 +233,7 @@ export default function AddExpense() {
                 Select the members who will share this expense.
               </p>
 
-              <div
-                style={{
-                  display: 'grid',
-                  gap: '12px',
-                  marginTop: '12px',
-                }}
-              >
+              <div className="split-list">
                 {members.map((member) => {
                   const memberId = String(member._id);
                   const checked = splitAmong.includes(memberId);
@@ -243,15 +241,7 @@ export default function AddExpense() {
                   return (
                     <label
                       key={memberId}
-                      style={{
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: '12px',
-                        padding: '12px',
-                        border: '1px solid var(--border, #ddd)',
-                        borderRadius: '10px',
-                        cursor: submitting ? 'not-allowed' : 'pointer',
-                      }}
+                      className={`split-option${checked ? ' is-checked' : ''}`}
                     >
                       <input
                         type="checkbox"
@@ -277,7 +267,7 @@ export default function AddExpense() {
 
             <button
               type="submit"
-              className="btn btn-primary"
+              className="btn btn-primary btn-block"
               disabled={
                 submitting ||
                 !description.trim() ||
@@ -285,21 +275,11 @@ export default function AddExpense() {
                 !paidBy ||
                 splitAmong.length === 0
               }
-              style={{ width: '100%', marginTop: '20px' }}
             >
               {submitting ? 'Saving Expense...' : 'Add Expense'}
             </button>
 
-            <Link
-              to={`/groups/${groupId}`}
-              className="btn"
-              style={{
-                display: 'block',
-                textAlign: 'center',
-                marginTop: '12px',
-                textDecoration: 'none',
-              }}
-            >
+            <Link to={`/groups/${groupId}`} className="btn btn-secondary btn-block">
               Cancel
             </Link>
           </form>

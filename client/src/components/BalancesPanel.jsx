@@ -1,47 +1,34 @@
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import api, { getErrorMessage } from '../api/client.js';
 import { formatPeso } from '../utils/money.js';
 import Spinner from './Spinner.jsx';
 
-export default function BalancesPanel({ groupId }) {
+// refreshKey: GroupPage bumps it whenever an expense is deleted or a member is
+// added, so the balances always match the expense list.
+export default function BalancesPanel({ groupId, refreshKey = 0 }) {
   const [balances, setBalances] = useState([]);
   const [transfers, setTransfers] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
 
-  useEffect(() => {
-    let isMounted = true;
+  const fetchBalances = useCallback(async () => {
+    setLoading(true);
+    setError('');
 
-    async function fetchBalances() {
-      setLoading(true);
-      setError('');
-
-      try {
-        const res = await api.get(`/groups/${groupId}/balances`);
-
-        if (isMounted) {
-          setBalances(res.data.balances || []);
-          setTransfers(res.data.transfers || []);
-        }
-      } catch (err) {
-        if (isMounted) {
-          setError(getErrorMessage(err));
-        }
-      } finally {
-        if (isMounted) {
-          setLoading(false);
-        }
-      }
+    try {
+      const res = await api.get(`/groups/${groupId}/balances`);
+      setBalances(res.data.balances || []);
+      setTransfers(res.data.transfers || []);
+    } catch (err) {
+      setError(getErrorMessage(err));
+    } finally {
+      setLoading(false);
     }
-
-    if (groupId) {
-      fetchBalances();
-    }
-
-    return () => {
-      isMounted = false;
-    };
   }, [groupId]);
+
+  useEffect(() => {
+    if (groupId) fetchBalances();
+  }, [groupId, refreshKey, fetchBalances]);
 
   return (
     <div className="panel">
@@ -49,70 +36,52 @@ export default function BalancesPanel({ groupId }) {
 
       {loading ? (
         <div className="loading-state">
-          <Spinner />
-          <p className="muted">Loading balances...</p>
+          <Spinner label="Loading balances…" />
+          <p className="muted">Loading balances…</p>
         </div>
       ) : error ? (
         <div className="error-message">
-          <p>{error}</p>
-          <button
-            type="button"
-            className="btn btn-secondary"
-            onClick={() => window.location.reload()}
-          >
-            Try Again
+          <p className="alert alert-error" role="alert">{error}</p>
+          <button type="button" className="btn btn-secondary" onClick={fetchBalances}>
+            Try again
           </button>
         </div>
       ) : (
         <>
           <section className="balance-section">
-            <h3>Member Balances</h3>
+            <h3 className="section-title">Member balances</h3>
 
             {balances.length === 0 ? (
               <p className="muted">No members found.</p>
             ) : (
               <div className="balance-list">
-                {balances.map((item) => (
-                  <div
-                    className="balance-item"
-                    key={item.user._id}
-                  >
-                    <div>
-                      <strong>{item.user.name}</strong>
-                      <p className="muted">
-                        {item.net > 0
-                          ? 'Gets back'
-                          : item.net < 0
-                            ? 'Owes'
-                            : 'Settled'}
-                      </p>
-                    </div>
+                {balances.map((item) => {
+                  const kind = item.net > 0 ? 'positive' : item.net < 0 ? 'negative' : 'neutral';
+                  const label = item.net > 0 ? 'Gets back' : item.net < 0 ? 'Owes' : 'Settled';
+                  const sign = item.net > 0 ? '+' : item.net < 0 ? '−' : '';
 
-                    <strong
-                      className={
-                        item.net > 0
-                          ? 'balance-positive'
-                          : item.net < 0
-                            ? 'balance-negative'
-                            : 'balance-neutral'
-                      }
-                    >
-                      {item.net > 0 ? '+' : item.net < 0 ? '-' : ''}
-                      {formatPeso(Math.abs(item.net))}
-                    </strong>
-                  </div>
-                ))}
+                  return (
+                    <div className="balance-item" key={item.user._id}>
+                      <div className="balance-who">
+                        <strong>{item.user.name}</strong>
+                        <span className="muted small">{label}</span>
+                      </div>
+                      <strong className={`balance-chip balance-${kind}`}>
+                        {sign}
+                        {formatPeso(Math.abs(item.net))}
+                      </strong>
+                    </div>
+                  );
+                })}
               </div>
             )}
           </section>
 
-          <section className="balance-section">
-            <h3>Who Pays Whom</h3>
+          <section className="balance-section transfer-section">
+            <h3 className="section-title">Who pays whom</h3>
 
             {transfers.length === 0 ? (
-              <p className="muted">
-                Everyone is settled up!
-              </p>
+              <p className="transfer-empty">Everyone is settled up! 🎉</p>
             ) : (
               <div className="transfer-list">
                 {transfers.map((transfer, index) => (
@@ -120,15 +89,12 @@ export default function BalancesPanel({ groupId }) {
                     className="transfer-item"
                     key={`${transfer.from._id}-${transfer.to._id}-${index}`}
                   >
-                    <div className="transfer-details">
+                    <span className="transfer-details">
                       <strong>{transfer.from.name}</strong>
-                      <span className="muted"> pays </span>
+                      <span className="transfer-arrow"> pays </span>
                       <strong>{transfer.to.name}</strong>
-                    </div>
-
-                    <strong className="balance-negative">
-                      {formatPeso(transfer.amount)}
-                    </strong>
+                    </span>
+                    <strong className="transfer-amount">{formatPeso(transfer.amount)}</strong>
                   </div>
                 ))}
               </div>

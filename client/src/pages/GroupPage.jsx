@@ -15,6 +15,10 @@ export default function GroupPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
 
+  // Bump this to make ExpenseList/BalancesPanel refetch after something changes
+  const [refreshKey, setRefreshKey] = useState(0);
+  const refresh = () => setRefreshKey((k) => k + 1);
+
   const [email, setEmail] = useState('');
   const [adding, setAdding] = useState(false);
   const [memberMsg, setMemberMsg] = useState({ type: '', text: '' });
@@ -38,6 +42,7 @@ export default function GroupPage() {
       setGroup(res.data.group);
       setEmail('');
       setMemberMsg({ type: 'success', text: 'Member added!' });
+      refresh();
     } catch (err) {
       setMemberMsg({ type: 'error', text: getErrorMessage(err) });
     } finally {
@@ -89,11 +94,11 @@ export default function GroupPage() {
 
       <main className="container container-overlap group-layout">
         <section className="group-main">
-          <ExpenseList groupId={groupId} group={group} />
+          <ExpenseList groupId={groupId} group={group} onChange={refresh} />
         </section>
 
         <aside className="group-side">
-          <BalancesPanel groupId={groupId} group={group} />
+          <BalancesPanel groupId={groupId} group={group} refreshKey={refreshKey} />
 
           <form onSubmit={handleAddMember} className="panel form">
             <h2 className="display panel-title">Add member</h2>
